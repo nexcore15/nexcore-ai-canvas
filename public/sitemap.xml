@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Paths are relative until a production domain is set. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>/</loc><priority>1.0</priority></url>
+  <url><loc>/gallery</loc><priority>0.7</priority></url>
+  <url><loc>/prompts</loc><priority>0.8</priority></url>
+  <url><loc>/blog</loc><priority>0.8</priority></url>
+  <url><loc>/blog/how-to-write-perfect-ai-image-prompts</loc><priority>0.7</priority></url>
+  <url><loc>/blog/top-free-ai-image-generators-2026</loc><priority>0.7</priority></url>
+  <url><loc>/blog/understanding-aspect-ratios-in-ai-art</loc><priority>0.7</priority></url>
+  <url><loc>/blog/beginners-guide-to-text-to-image-ai</loc><priority>0.7</priority></url>
+  <url><loc>/blog/best-prompts-for-realistic-portraits</loc><priority>0.7</priority></url>
+  <url><loc>/blog/ai-art-copyright-what-you-need-to-know</loc><priority>0.7</priority></url>
+  <url><loc>/blog/how-to-use-negative-prompts-effectively</loc><priority>0.7</priority></url>
+  <url><loc>/blog/creating-consistent-characters-with-ai</loc><priority>0.7</priority></url>
+  <url><loc>/about</loc><priority>0.5</priority></url>
+  <url><loc>/contact</loc><priority>0.5</priority></url>
+  <url><loc>/faq</loc><priority>0.6</priority></url>
+  <url><loc>/privacy</loc><priority>0.3</priority></url>
+  <url><loc>/terms</loc><priority>0.3</priority></url>
+  <url><loc>/cookies</loc><priority>0.3</priority></url>
+  <url><loc>/disclaimer</loc><priority>0.3</priority></url>
+</urlset>
