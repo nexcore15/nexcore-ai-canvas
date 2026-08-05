@@ -158,7 +158,7 @@ export async function renderImage(opts: {
 
   throw new Error(
     errors.length
-      ? `No image engine is available right now. ${errors[0]}`
+      ? `No image engine is available right now. ${errors.join(" | ")}`
       : "No image engine is available right now.",
   );
 }
