@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteHeader } from "../components/site/header";
 import { SiteFooter } from "../components/site/footer";
+import { Splash } from "../components/brand/splash";
 import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
@@ -153,6 +154,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="gradient-surface min-h-screen">
+        <Splash />
         <SiteHeader />
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
