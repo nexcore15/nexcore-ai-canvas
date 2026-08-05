@@ -5,7 +5,9 @@ export type GeneratedImage = {
   id: string;
   url: string;
   prompt: string;
-  negativePrompt?: string | undefined;
+  enhancedPrompt?: string | undefined;
+  style?: string | undefined;
+  quality?: string | undefined;
   model: string;
   ratio: string;
   width: number;

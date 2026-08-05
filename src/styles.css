@@ -64,13 +64,13 @@
 /* Pixflow AI design system — dark-first, violet + cyan gradient accents. */
 :root {
   --radius: 1rem;
-  --background: oklch(0.16 0.03 275);
+  --background: oklch(0.135 0.025 272);
   --foreground: oklch(0.97 0.01 270);
-  --card: oklch(0.21 0.035 277);
+  --card: oklch(0.195 0.03 275);
   --card-foreground: oklch(0.97 0.01 270);
   --popover: oklch(0.19 0.035 277);
   --popover-foreground: oklch(0.97 0.01 270);
-  --primary: oklch(0.62 0.22 295);
+  --primary: oklch(0.66 0.24 296);
   --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.27 0.04 277);
   --secondary-foreground: oklch(0.97 0.01 270);
@@ -97,13 +97,25 @@
   --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: oklch(0.62 0.22 295);
 
-  --gradient-brand: linear-gradient(115deg, oklch(0.62 0.22 295), oklch(0.78 0.14 200));
+  --gradient-brand: linear-gradient(115deg, oklch(0.66 0.24 296), oklch(0.8 0.15 200));
+  --gradient-brand-soft: linear-gradient(
+    135deg,
+    oklch(0.66 0.24 296 / 18%),
+    oklch(0.8 0.15 200 / 12%)
+  );
+  --glass-bg: oklch(0.24 0.035 277 / 55%);
+  --glass-border: oklch(1 0 0 / 10%);
+  --glass-highlight: oklch(1 0 0 / 18%);
+  --shadow-3d:
+    0 1px 0 0 oklch(1 0 0 / 8%) inset,
+    0 24px 70px -30px oklch(0.66 0.24 296 / 60%),
+    0 10px 30px -18px oklch(0 0 0 / 90%);
   --gradient-surface: radial-gradient(
     900px 500px at 50% -10%,
     oklch(0.62 0.22 295 / 22%),
     transparent 70%
   );
-  --shadow-glow: 0 18px 60px -20px oklch(0.62 0.22 295 / 55%);
+  --shadow-glow: 0 22px 70px -22px oklch(0.66 0.24 296 / 60%);
   --shadow-card: 0 12px 40px -22px oklch(0 0 0 / 80%);
 }
 
@@ -212,4 +224,106 @@ html.light {
 
 @utility float-slow {
   animation: float-slow 7s ease-in-out infinite;
+}
+
+
+/* ---- Premium surface utilities ---------------------------------------- */
+
+@utility glass {
+  background-color: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-3xl);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  box-shadow: var(--shadow-3d);
+}
+
+@utility glass-soft {
+  background-color: oklch(1 0 0 / 5%);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+@utility gradient-border {
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background-image: var(--gradient-brand);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+}
+
+@utility press {
+  transition:
+    transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+  &:hover {
+    transform: translateY(-2px);
+  }
+  &:active {
+    transform: translateY(0) scale(0.985);
+  }
+}
+
+@keyframes aurora {
+  0%,
+  100% {
+    transform: translate3d(-6%, -4%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(6%, 5%, 0) scale(1.15);
+  }
+}
+
+@utility aurora {
+  animation: aurora 16s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@utility spin-slow {
+  animation: spin-slow 14s linear infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@utility pulse-ring {
+  animation: pulse-ring 2.4s ease-out infinite;
+}
+
+@utility noise {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
 }

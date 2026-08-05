@@ -1,50 +1,75 @@
-import { useServerFn } from "@tanstack/react-start";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, ImageIcon, Loader2, Sparkles, Wand2 } from "lucide-react";
+import {
+  Aperture,
+  Boxes,
+  Brush,
+  Camera,
+  Loader2,
+  Sparkles,
+  Wand2,
+  Zap,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ImageCard } from "@/components/site/image-card";
-import { enhancePrompt } from "@/lib/enhance.functions";
 import { useGallery, type GeneratedImage } from "@/lib/gallery";
 import { quickPrompts } from "@/lib/prompts";
 
 /** Aspect ratios offered to the user, mapped to generation dimensions. */
 const ratios = [
-  { id: "1:1", label: "1:1", width: 1024, height: 1024 },
-  { id: "16:9", label: "16:9", width: 1280, height: 720 },
-  { id: "9:16", label: "9:16", width: 720, height: 1280 },
-  { id: "4:3", label: "4:3", width: 1152, height: 864 },
-  { id: "3:4", label: "3:4", width: 864, height: 1152 },
+  { id: "1:1", label: "Square", hint: "1:1", width: 1024, height: 1024 },
+  { id: "16:9", label: "Wide", hint: "16:9", width: 1344, height: 768 },
+  { id: "9:16", label: "Phone", hint: "9:16", width: 768, height: 1344 },
+  { id: "4:3", label: "Classic", hint: "4:3", width: 1152, height: 864 },
+  { id: "3:4", label: "Portrait", hint: "3:4", width: 864, height: 1152 },
 ] as const;
 
-const models = [
-  { id: "pollinations", label: "Pixflow Free — best all-round (no limits)" },
-  { id: "turbo", label: "Pixflow Turbo — fastest" },
-  { id: "nexcore-hd", label: "Nexcore HD — highest quality" },
+const styles = [
+  { id: "realistic", label: "Realistic", Icon: Camera, note: "Photoreal" },
+  { id: "3d", label: "3D", Icon: Boxes, note: "Rendered" },
+  { id: "2d", label: "2D", Icon: Brush, note: "Illustration" },
+  { id: "cartoon", label: "Cartoon", Icon: Sparkles, note: "Playful" },
+] as const;
+
+const qualities = [
+  { id: "hd", label: "HD", note: "Fast · sharp", Icon: Zap },
+  { id: "ultra", label: "Ultra", note: "Slower · finest detail", Icon: Aperture },
 ] as const;
 
 export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
   const [prompt, setPrompt] = useState(initialPrompt);
-  const [negative, setNegative] = useState("");
-  const [model, setModel] = useState<string>("pollinations");
+  const [style, setStyle] = useState<string>("realistic");
+  const [quality, setQuality] = useState<string>("hd");
   const [ratio, setRatio] = useState<string>("1:1");
-  const [advanced, setAdvanced] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [enhancing, setEnhancing] = useState(false);
+  const [stage, setStage] = useState("");
   const [progress, setProgress] = useState(0);
   const [current, setCurrent] = useState<GeneratedImage | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState("");
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { add, toggleFavorite } = useGallery();
-  const enhance = useServerFn(enhancePrompt);
 
-  useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
+  useEffect(
+    () => () => {
+      if (timer.current) clearInterval(timer.current);
+    },
+    [],
+  );
 
   const startProgress = () => {
-    setProgress(8);
+    setProgress(6);
+    setStage("Gemini is reading your idea…");
     timer.current = setInterval(() => {
-      setProgress((p) => (p < 92 ? p + Math.max(1, (95 - p) / 14) : p));
+      setProgress((p) => {
+        const next = p < 94 ? p + Math.max(0.7, (96 - p) / 22) : p;
+        if (next > 26) setStage("Composing a detailed prompt…");
+        if (next > 52) setStage("Rendering your image…");
+        if (next > 82) setStage("Polishing the final details…");
+        return next;
+      });
     }, 220);
   };
   const stopProgress = () => {
@@ -53,13 +78,22 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
     setProgress(100);
   };
 
-  async function generate(overridePrompt?: string) {
-    const text = (overridePrompt ?? prompt).trim();
+  const size = ratios.find((r) => r.id === ratio) ?? ratios[0];
+
+  const preload = (url: string) =>
+    new Promise<void>((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve();
+      img.onerror = () => resolve();
+      img.src = url;
+    });
+
+  async function generate() {
+    const text = prompt.trim();
     if (!text) {
       toast.error("Describe your image first");
       return;
     }
-    const size = ratios.find((r) => r.id === ratio) ?? ratios[0];
     setLoading(true);
     setCurrent(null);
     startProgress();
@@ -70,8 +104,8 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: text,
-          negativePrompt: negative,
-          model,
+          style,
+          quality,
           width: size.width,
           height: size.height,
         }),
@@ -79,24 +113,21 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
       const json = (await response.json()) as {
         imageUrl?: string;
         modelUsed?: string;
+        finalPrompt?: string;
         error?: string;
       };
       if (!response.ok || !json.imageUrl) throw new Error(json.error ?? "Generation failed");
 
-      // Wait for the bytes so the reveal is instant instead of a slow paint.
-      await new Promise<void>((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error("Image could not be loaded"));
-        img.src = json.imageUrl as string;
-      });
+      await preload(json.imageUrl);
 
       const image: GeneratedImage = {
         id: crypto.randomUUID(),
         url: json.imageUrl,
         prompt: text,
-        negativePrompt: negative || undefined,
-        model: json.modelUsed ?? "Pixflow Free",
+        enhancedPrompt: json.finalPrompt,
+        style,
+        quality,
+        model: json.modelUsed ?? "Pixflow",
         ratio: size.id,
         width: size.width,
         height: size.height,
@@ -110,157 +141,171 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
     } finally {
       stopProgress();
       setLoading(false);
-      setTimeout(() => setProgress(0), 600);
+      setStage("");
+      setTimeout(() => setProgress(0), 700);
     }
   }
 
-  async function runEnhance() {
-    if (!prompt.trim()) {
-      toast.error("Write a short idea first, then enhance it");
-      return;
-    }
-    setEnhancing(true);
+  async function applyEdit() {
+    const instruction = editText.trim();
+    if (!current || !instruction) return;
+    setEditing(true);
     try {
-      const result = await enhance({ data: { prompt: prompt.trim() } });
-      setPrompt(result.prompt);
-      toast.success(result.enhanced ? "Prompt enhanced" : "Prompt kept as is");
+      const response = await fetch("/api/edit-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: current.url, instruction }),
+      });
+      const json = (await response.json()) as {
+        imageUrl?: string;
+        modelUsed?: string;
+        error?: string;
+      };
+      if (!response.ok || !json.imageUrl) throw new Error(json.error ?? "Edit failed");
+      await preload(json.imageUrl);
+
+      const edited: GeneratedImage = {
+        ...current,
+        id: crypto.randomUUID(),
+        url: json.imageUrl,
+        prompt: `${current.prompt} — ${instruction}`,
+        model: json.modelUsed ?? current.model,
+        createdAt: Date.now(),
+      };
+      setCurrent(edited);
+      add(edited);
+      setEditText("");
+      toast.success("Edit applied");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Enhancer unavailable");
+      toast.error(error instanceof Error ? error.message : "Edit failed");
     } finally {
-      setEnhancing(false);
+      setEditing(false);
     }
   }
 
-  const size = ratios.find((r) => r.id === ratio) ?? ratios[0];
+  const chip =
+    "press relative flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 text-sm";
+  const chipOn = "border-transparent bg-[image:var(--gradient-brand-soft)] text-foreground";
+  const chipOff = "border-border/70 text-muted-foreground hover:text-foreground";
 
   return (
     <div className="mx-auto w-full max-w-3xl">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 22 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="card-soft p-4 sm:p-5"
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="glass gradient-border noise p-4 sm:p-6"
       >
         <label htmlFor="prompt" className="sr-only">
           Describe your dream image
         </label>
-        <textarea
-          id="prompt"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void generate();
-          }}
-          rows={3}
-          placeholder="Describe your dream image..."
-          className="w-full resize-none rounded-xl border border-border bg-background/60 p-4 text-base outline-none transition-shadow placeholder:text-muted-foreground focus:border-primary focus:shadow-[0_0_0_4px_oklch(0.62_0.22_295/20%)]"
-        />
-
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-muted-foreground">Shape</span>
-          {ratios.map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              onClick={() => setRatio(r.id)}
-              aria-pressed={ratio === r.id}
-              className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${
-                ratio === r.id
-                  ? "border-primary bg-primary/15 text-foreground"
-                  : "border-border text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
+        <div className="relative">
+          <textarea
+            id="prompt"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void generate();
+            }}
+            rows={3}
+            placeholder="Describe anything — Gemini turns it into a pro prompt for you…"
+            className="w-full resize-none rounded-2xl border border-border/70 bg-background/50 p-4 text-base outline-none transition-shadow placeholder:text-muted-foreground focus:border-primary/70 focus:shadow-[0_0_0_4px_oklch(0.66_0.24_296/18%)]"
+          />
+          <span className="pointer-events-none absolute right-3 bottom-3 hidden text-[11px] text-muted-foreground sm:block">
+            ⌘/Ctrl + ↵
+          </span>
         </div>
 
-        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
-          <div>
-            <label htmlFor="model" className="sr-only">
-              AI model
-            </label>
-            <select
-              id="model"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="w-full rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary"
-            >
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <fieldset>
+            <legend className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              Style
+            </legend>
+            <div className="grid grid-cols-2 gap-2">
+              {styles.map(({ id, label, Icon, note }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setStyle(id)}
+                  aria-pressed={style === id}
+                  className={`${chip} ${style === id ? chipOn : chipOff}`}
+                >
+                  <Icon className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                  <span className="text-left leading-tight">
+                    {label}
+                    <span className="block text-[11px] opacity-70">{note}</span>
+                  </span>
+                </button>
               ))}
-            </select>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => void runEnhance()}
-              disabled={enhancing}
-              className="inline-flex items-center gap-2 rounded-xl border border-border bg-secondary/50 px-4 py-2.5 text-sm font-medium transition-colors hover:bg-secondary disabled:opacity-60"
-            >
-              {enhancing ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Wand2 className="size-4" />
-              )}
-              Enhance
-            </button>
-            <button
-              type="button"
-              onClick={() => void generate()}
-              disabled={loading}
-              className="lift inline-flex items-center gap-2 rounded-xl bg-[image:var(--gradient-brand)] px-6 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-70"
-            >
-              {loading ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Sparkles className="size-4" />
-              )}
-              {loading ? "Creating..." : "Generate"}
-            </button>
-          </div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              Quality
+            </legend>
+            <div className="grid gap-2">
+              {qualities.map(({ id, label, note, Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setQuality(id)}
+                  aria-pressed={quality === id}
+                  className={`${chip} justify-between ${quality === id ? chipOn : chipOff}`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Icon className="size-4 text-accent" aria-hidden="true" />
+                    <span className="font-medium">{label}</span>
+                  </span>
+                  <span className="text-[11px] opacity-70">{note}</span>
+                </button>
+              ))}
+            </div>
+          </fieldset>
         </div>
+
+        <fieldset className="mt-4">
+          <legend className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            Shape
+          </legend>
+          <div className="flex flex-wrap gap-2">
+            {ratios.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setRatio(r.id)}
+                aria-pressed={ratio === r.id}
+                className={`press rounded-xl border px-3 py-2 text-xs ${
+                  ratio === r.id ? chipOn : chipOff
+                }`}
+              >
+                {r.label} <span className="opacity-60">{r.hint}</span>
+              </button>
+            ))}
+          </div>
+        </fieldset>
 
         <button
           type="button"
-          onClick={() => setAdvanced((v) => !v)}
-          aria-expanded={advanced}
-          className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          onClick={() => void generate()}
+          disabled={loading}
+          className="press mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[image:var(--gradient-brand)] px-6 py-3.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] disabled:opacity-70"
         >
-          <ChevronDown className={`size-3.5 transition-transform ${advanced ? "rotate-180" : ""}`} />
-          Negative prompt (what you don't want)
+          {loading ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Wand2 className="size-4" />
+          )}
+          {loading ? "Creating…" : "Generate image"}
         </button>
-        <AnimatePresence initial={false}>
-          {advanced ? (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
-              <label htmlFor="negative" className="sr-only">
-                Negative prompt
-              </label>
-              <input
-                id="negative"
-                value={negative}
-                onChange={(e) => setNegative(e.target.value)}
-                placeholder="blurry, watermark, text, extra fingers"
-                className="mt-2 w-full rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary"
-              />
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          {quickPrompts.map((q) => (
+          {quickPrompts.slice(0, 6).map((q) => (
             <button
               key={q}
               type="button"
               onClick={() => setPrompt(q)}
-              className="rounded-full border border-border bg-secondary/40 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              className="glass-soft press rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
             >
               {q}
             </button>
@@ -268,18 +313,21 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
         </div>
 
         {progress > 0 ? (
-          <div
-            role="progressbar"
-            aria-valuenow={Math.round(progress)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Generation progress"
-            className="mt-4 h-1.5 overflow-hidden rounded-full bg-secondary"
-          >
+          <div className="mt-4">
             <div
-              className="h-full rounded-full bg-[image:var(--gradient-brand)] transition-[width] duration-200"
-              style={{ width: `${progress}%` }}
-            />
+              role="progressbar"
+              aria-valuenow={Math.round(progress)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Generation progress"
+              className="h-1.5 overflow-hidden rounded-full bg-secondary/70"
+            >
+              <div
+                className="h-full rounded-full bg-[image:var(--gradient-brand)] transition-[width] duration-200"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            {stage ? <p className="mt-2 text-xs text-muted-foreground">{stage}</p> : null}
           </div>
         ) : null}
       </motion.div>
@@ -287,19 +335,61 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
       <div className="mt-6" aria-live="polite">
         {loading ? (
           <div
-            className="shimmer card-soft grid w-full place-items-center text-muted-foreground"
+            className="shimmer glass grid w-full place-items-center text-muted-foreground"
             style={{ aspectRatio: `${size.width} / ${size.height}` }}
           >
-            <div className="flex flex-col items-center gap-2 text-sm">
-              <ImageIcon className="size-6 animate-pulse" aria-hidden="true" />
-              Painting your idea...
+            <div className="flex flex-col items-center gap-3 text-sm">
+              <Sparkles className="size-6 animate-pulse text-primary" aria-hidden="true" />
+              {stage || "Painting your idea…"}
             </div>
           </div>
         ) : null}
 
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           {!loading && current ? (
-            <ImageCard image={current} onToggleFavorite={toggleFavorite} />
+            <motion.div
+              key={current.id}
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+            >
+              <ImageCard image={current} onToggleFavorite={toggleFavorite} />
+
+              <div className="glass gradient-border mt-4 p-4">
+                <p className="text-sm font-medium">Tweak it with AI</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Type a change — “make it night”, “add sunglasses”, “warmer colours”.
+                </p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <label htmlFor="edit" className="sr-only">
+                    Edit instruction
+                  </label>
+                  <input
+                    id="edit"
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void applyEdit();
+                    }}
+                    placeholder="What should change?"
+                    className="flex-1 rounded-xl border border-border/70 bg-background/50 px-3 py-2.5 text-sm outline-none focus:border-primary/70"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void applyEdit()}
+                    disabled={editing || !editText.trim()}
+                    className="press inline-flex items-center justify-center gap-2 rounded-xl bg-[image:var(--gradient-brand)] px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+                  >
+                    {editing ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Wand2 className="size-4" />
+                    )}
+                    Apply edit
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           ) : null}
         </AnimatePresence>
       </div>

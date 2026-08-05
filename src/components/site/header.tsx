@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import { Menu, Sparkles, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
 
+import { PixflowMark, PixflowWordmark } from "../brand/logo";
 import { ThemeToggle } from "./theme-toggle";
 
 const nav = [
@@ -17,15 +18,11 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-border/60 bg-background/60 backdrop-blur-2xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
         <Link to="/" className="flex items-center gap-2" aria-label="Pixflow AI home">
-          <span className="grid size-9 place-items-center rounded-xl bg-[image:var(--gradient-brand)] text-primary-foreground">
-            <Sparkles className="size-5" aria-hidden="true" />
-          </span>
-          <span className="text-lg font-semibold tracking-tight">
-            Pixflow <span className="gradient-text">AI</span>
-          </span>
+          <PixflowMark className="size-9" />
+          <PixflowWordmark />
         </Link>
 
         <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
