@@ -158,7 +158,7 @@ export async function renderImage(opts: {
 
   throw new Error(
     errors.length
-      ? `No image engine is available right now. ${errors.join(" | ")}`
+      ? `Image generation is temporarily unavailable — every engine refused the request. Details: ${errors.join(" | ")}`
       : "No image engine is available right now.",
   );
 }
