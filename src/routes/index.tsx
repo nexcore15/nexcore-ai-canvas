@@ -15,9 +15,8 @@ const description =
   "Turn any idea into a stunning image in seconds. Free forever, no account, no watermark. Built by Nexcore.";
 
 export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    prompt: typeof search["prompt"] === "string" ? (search["prompt"] as string) : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { prompt?: string } =>
+    typeof search["prompt"] === "string" ? { prompt: search["prompt"] } : {},
   head: () => ({
     meta: [
       { title },
