@@ -15,6 +15,7 @@ import { SiteHeader } from "../components/site/header";
 import { SiteFooter } from "../components/site/footer";
 import { Splash } from "../components/brand/splash";
 import { Toaster } from "../components/ui/sonner";
+import { AuthProvider } from "../lib/auth";
 
 function NotFoundComponent() {
   return (
@@ -153,14 +154,16 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="gradient-surface min-h-screen">
-        <Splash />
-        <SiteHeader />
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
-        <SiteFooter />
-        <Toaster position="bottom-right" />
-      </div>
+      <AuthProvider>
+        <div className="gradient-surface min-h-screen">
+          <Splash />
+          <SiteHeader />
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+          <SiteFooter />
+          <Toaster position="bottom-right" />
+        </div>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
