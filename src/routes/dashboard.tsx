@@ -49,7 +49,10 @@ function Dashboard() {
 
   async function remove(id: string) {
     const { error } = await supabase.from("generations").delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setRows((r) => r.filter((x) => x.id !== id));
     toast.success("Removed from history");
   }
@@ -57,7 +60,10 @@ function Dashboard() {
   async function clearAll() {
     if (!user) return;
     const { error } = await supabase.from("generations").delete().eq("user_id", user.id);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setRows([]);
     toast.success("History cleared");
   }
