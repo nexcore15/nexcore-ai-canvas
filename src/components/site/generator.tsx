@@ -269,15 +269,25 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
               Style
             </legend>
             <div className="grid grid-cols-2 gap-2">
-              {styles.map(({ id, label, Icon, note }) => (
+              {styles.map(({ id, label, art, note }) => (
                 <button
                   key={id}
                   type="button"
                   onClick={() => setStyle(id)}
                   aria-pressed={style === id}
-                  className={`${chip} ${style === id ? chipOn : chipOff}`}
+                  className={`${chip} tilt-3d ${style === id ? chipOn : chipOff}`}
                 >
-                  <Icon className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                  <img
+                    src={art}
+                    alt=""
+                    aria-hidden="true"
+                    width={512}
+                    height={512}
+                    loading="lazy"
+                    className={`size-9 shrink-0 object-contain drop-shadow-[0_6px_14px_oklch(0.66_0.24_296/45%)] ${
+                      style === id ? "float-3d" : ""
+                    }`}
+                  />
                   <span className="text-left leading-tight">
                     {label}
                     <span className="block text-[11px] opacity-70">{note}</span>
