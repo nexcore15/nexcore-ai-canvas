@@ -1,20 +1,17 @@
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  Aperture,
-  Boxes,
-  Brush,
-  Camera,
-  Loader2,
-  Sparkles,
-  Wand2,
-  Zap,
-} from "lucide-react";
+import { Aperture, Loader2, Sparkles, Upload, Wand2, X, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ImageCard } from "@/components/site/image-card";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 import { useGallery, type GeneratedImage } from "@/lib/gallery";
 import { quickPrompts } from "@/lib/prompts";
+import styleRealistic from "@/assets/style-realistic.png";
+import style3d from "@/assets/style-3d.png";
+import style2d from "@/assets/style-2d.png";
+import styleCartoon from "@/assets/style-cartoon.png";
 
 /** Aspect ratios offered to the user, mapped to generation dimensions. */
 const ratios = [
@@ -26,10 +23,10 @@ const ratios = [
 ] as const;
 
 const styles = [
-  { id: "realistic", label: "Realistic", Icon: Camera, note: "Photoreal" },
-  { id: "3d", label: "3D", Icon: Boxes, note: "Rendered" },
-  { id: "2d", label: "2D", Icon: Brush, note: "Illustration" },
-  { id: "cartoon", label: "Cartoon", Icon: Sparkles, note: "Playful" },
+  { id: "realistic", label: "Realistic", art: styleRealistic, note: "Photoreal" },
+  { id: "3d", label: "3D", art: style3d, note: "Rendered" },
+  { id: "2d", label: "2D", art: style2d, note: "Illustration" },
+  { id: "cartoon", label: "Cartoon", art: styleCartoon, note: "Playful" },
 ] as const;
 
 const qualities = [
@@ -48,9 +45,34 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
   const [current, setCurrent] = useState<GeneratedImage | null>(null);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState("");
+  const [upload, setUpload] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fileInput = useRef<HTMLInputElement | null>(null);
 
   const { add, toggleFavorite } = useGallery();
+  const { user, refresh } = useAuth();
+
+  /** Records a generation against the signed-in account and spends one credit. */
+  async function track(image: GeneratedImage, kind: "generate" | "edit") {
+    if (!user) return;
+    try {
+      await supabase.from("generations").insert({
+        user_id: user.id,
+        prompt: image.prompt,
+        final_prompt: image.enhancedPrompt ?? null,
+        style: image.style ?? null,
+        quality: image.quality ?? null,
+        width: image.width,
+        height: image.height,
+        engine: image.model,
+        kind,
+      });
+      await supabase.rpc("spend_credit", { _amount: 1 });
+      await refresh();
+    } catch {
+      /* history sync is best-effort — never block the image */
+    }
+  }
 
   useEffect(
     () => () => {
@@ -135,6 +157,7 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
       };
       setCurrent(image);
       add(image);
+      void track(image, "generate");
       toast.success(`Image ready — ${image.model}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong");
@@ -148,13 +171,14 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
 
   async function applyEdit() {
     const instruction = editText.trim();
-    if (!current || !instruction) return;
+    const source = current?.url ?? upload;
+    if (!source || !instruction) return;
     setEditing(true);
     try {
       const response = await fetch("/api/edit-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: current.url, instruction }),
+        body: JSON.stringify({ imageUrl: source, instruction }),
       });
       const json = (await response.json()) as {
         imageUrl?: string;
@@ -165,15 +189,23 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
       await preload(json.imageUrl);
 
       const edited: GeneratedImage = {
-        ...current,
+        ...(current ?? {
+          style,
+          quality,
+          ratio: size.id,
+          width: size.width,
+          height: size.height,
+        }),
         id: crypto.randomUUID(),
         url: json.imageUrl,
-        prompt: `${current.prompt} — ${instruction}`,
-        model: json.modelUsed ?? current.model,
+        prompt: current ? `${current.prompt} — ${instruction}` : `Uploaded photo — ${instruction}`,
+        model: json.modelUsed ?? current?.model ?? "Pixflow",
         createdAt: Date.now(),
-      };
+      } as GeneratedImage;
       setCurrent(edited);
       add(edited);
+      setUpload(null);
+      void track(edited, "edit");
       setEditText("");
       toast.success("Edit applied");
     } catch (error) {
@@ -181,6 +213,21 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
     } finally {
       setEditing(false);
     }
+  }
+
+  function pickFile(file: File | undefined) {
+    if (!file) return;
+    if (file.size > 8_000_000) {
+      toast.error("Please choose an image under 8 MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setUpload(String(reader.result));
+      setCurrent(null);
+      toast.success("Photo added — describe the change below");
+    };
+    reader.readAsDataURL(file);
   }
 
   const chip =
@@ -222,15 +269,25 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
               Style
             </legend>
             <div className="grid grid-cols-2 gap-2">
-              {styles.map(({ id, label, Icon, note }) => (
+              {styles.map(({ id, label, art, note }) => (
                 <button
                   key={id}
                   type="button"
                   onClick={() => setStyle(id)}
                   aria-pressed={style === id}
-                  className={`${chip} ${style === id ? chipOn : chipOff}`}
+                  className={`${chip} tilt-3d ${style === id ? chipOn : chipOff}`}
                 >
-                  <Icon className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                  <img
+                    src={art}
+                    alt=""
+                    aria-hidden="true"
+                    width={512}
+                    height={512}
+                    loading="lazy"
+                    className={`size-9 shrink-0 object-contain drop-shadow-[0_6px_14px_oklch(0.66_0.24_296/45%)] ${
+                      style === id ? "float-3d" : ""
+                    }`}
+                  />
                   <span className="text-left leading-tight">
                     {label}
                     <span className="block text-[11px] opacity-70">{note}</span>
@@ -299,6 +356,44 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
           {loading ? "Creating…" : "Generate image"}
         </button>
 
+        <div className="mt-3">
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={(e) => pickFile(e.target.files?.[0])}
+          />
+          <button
+            type="button"
+            onClick={() => fileInput.current?.click()}
+            className="press flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border/80 px-4 py-3 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <Upload className="size-4" />
+            Upload your own photo and edit it with AI
+          </button>
+          {upload ? (
+            <div className="glass mt-3 flex items-center gap-3 p-3">
+              <img
+                src={upload}
+                alt="Photo you uploaded"
+                className="size-14 rounded-xl object-cover"
+              />
+              <p className="flex-1 text-xs text-muted-foreground">
+                Ready to edit — type your change in “Tweak it with AI” below.
+              </p>
+              <button
+                type="button"
+                onClick={() => setUpload(null)}
+                aria-label="Remove uploaded photo"
+                className="press rounded-lg border border-border p-2"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          ) : null}
+        </div>
+
         <div className="mt-4 flex flex-wrap gap-2">
           {quickPrompts.slice(0, 6).map((q) => (
             <button
@@ -346,14 +441,14 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
         ) : null}
 
         <AnimatePresence mode="wait">
-          {!loading && current ? (
+          {!loading && (current || upload) ? (
             <motion.div
-              key={current.id}
+              key={current?.id ?? "upload"}
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
             >
-              <ImageCard image={current} onToggleFavorite={toggleFavorite} />
+              {current ? <ImageCard image={current} onToggleFavorite={toggleFavorite} /> : null}
 
               <div className="glass gradient-border mt-4 p-4">
                 <p className="text-sm font-medium">Tweak it with AI</p>
