@@ -1,6 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Gauge, Lock, Sparkles, Wand2 } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 import { Generator } from "@/components/site/generator";
 import { ImageCard } from "@/components/site/image-card";
@@ -9,6 +9,10 @@ import showcase1 from "@/assets/showcase-1.jpg";
 import showcase2 from "@/assets/showcase-2.jpg";
 import showcase3 from "@/assets/showcase-3.jpg";
 import showcase4 from "@/assets/showcase-4.jpg";
+import iconGift from "@/assets/icon-gift.png";
+import iconBrain from "@/assets/icon-brain.png";
+import iconSpeed from "@/assets/icon-speed.png";
+import iconShield from "@/assets/icon-shield.png";
 
 const title = "Pixflow AI — Free AI Image Generator, No Sign-Up";
 const description =
@@ -33,10 +37,14 @@ export const Route = createFileRoute("/")({
 });
 
 const features = [
-  { Icon: Sparkles, title: "Free forever", text: "Unlimited generations, no card, no watermark." },
-  { Icon: Wand2, title: "Gemini prompt brain", text: "Every idea is rewritten into a pro prompt." },
-  { Icon: Gauge, title: "Seconds, not minutes", text: "Turbo engine renders while you blink." },
-  { Icon: Lock, title: "Private by default", text: "Keys stay server-side, images stay yours." },
+  { art: iconGift, title: "Free forever", text: "Unlimited generations, no card, no watermark." },
+  {
+    art: iconBrain,
+    title: "Gemini prompt brain",
+    text: "Every idea is rewritten into a pro prompt.",
+  },
+  { art: iconSpeed, title: "Seconds, not minutes", text: "Turbo engine renders while you blink." },
+  { art: iconShield, title: "Private by default", text: "Keys stay server-side, images stay yours." },
 ];
 
 const showcase = [
@@ -70,7 +78,7 @@ function Index() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="mt-4 text-4xl font-extrabold tracking-tight sm:text-6xl"
+            className="depth-text mt-4 text-4xl font-extrabold tracking-tight sm:text-6xl"
           >
             Turn words into <span className="gradient-text">art</span>
           </motion.h1>
@@ -94,18 +102,27 @@ function Index() {
         <h2 id="why" className="sr-only">
           Why Pixflow AI
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {features.map(({ Icon, title: t, text }, i) => (
+        <div className="scene-3d grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {features.map(({ art, title: t, text }, i) => (
             <motion.article
               key={t}
               initial={{ opacity: 0, y: 18 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
               transition={{ delay: i * 0.06 }}
-              className="card-soft lift p-5"
+              className="glass tilt-3d p-6 text-center"
             >
-              <Icon className="size-5 text-primary" aria-hidden="true" />
-              <h3 className="mt-3 font-semibold">{t}</h3>
+              <img
+                src={art}
+                alt=""
+                aria-hidden="true"
+                width={512}
+                height={512}
+                loading="lazy"
+                className="float-3d mx-auto size-24 object-contain drop-shadow-[0_18px_30px_oklch(0.66_0.24_296/40%)]"
+                style={{ animationDelay: `${i * 0.6}s` }}
+              />
+              <h3 className="mt-4 font-semibold">{t}</h3>
               <p className="mt-1 text-sm text-muted-foreground">{text}</p>
             </motion.article>
           ))}
