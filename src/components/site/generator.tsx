@@ -356,6 +356,44 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
           {loading ? "Creating…" : "Generate image"}
         </button>
 
+        <div className="mt-3">
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={(e) => pickFile(e.target.files?.[0])}
+          />
+          <button
+            type="button"
+            onClick={() => fileInput.current?.click()}
+            className="press flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border/80 px-4 py-3 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <Upload className="size-4" />
+            Upload your own photo and edit it with AI
+          </button>
+          {upload ? (
+            <div className="glass mt-3 flex items-center gap-3 p-3">
+              <img
+                src={upload}
+                alt="Photo you uploaded"
+                className="size-14 rounded-xl object-cover"
+              />
+              <p className="flex-1 text-xs text-muted-foreground">
+                Ready to edit — type your change in “Tweak it with AI” below.
+              </p>
+              <button
+                type="button"
+                onClick={() => setUpload(null)}
+                aria-label="Remove uploaded photo"
+                className="press rounded-lg border border-border p-2"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          ) : null}
+        </div>
+
         <div className="mt-4 flex flex-wrap gap-2">
           {quickPrompts.slice(0, 6).map((q) => (
             <button
