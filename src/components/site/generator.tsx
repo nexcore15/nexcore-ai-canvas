@@ -441,14 +441,14 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
         ) : null}
 
         <AnimatePresence mode="wait">
-          {!loading && current ? (
+          {!loading && (current || upload) ? (
             <motion.div
-              key={current.id}
+              key={current?.id ?? "upload"}
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
             >
-              <ImageCard image={current} onToggleFavorite={toggleFavorite} />
+              {current ? <ImageCard image={current} onToggleFavorite={toggleFavorite} /> : null}
 
               <div className="glass gradient-border mt-4 p-4">
                 <p className="text-sm font-medium">Tweak it with AI</p>
