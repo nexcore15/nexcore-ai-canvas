@@ -120,7 +120,19 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
     setCurrent(null);
     startProgress();
 
+    // Free, key-less direct Pollinations URL — used if the smart pipeline fails.
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
+      text,
+    )}?width=${size.width}&height=${size.height}&nologo=true&seed=${Math.floor(
+      Math.random() * 1_000_000,
+    )}`;
+
     try {
+      let imageUrl: string | undefined;
+      let modelUsed: string | undefined;
+      let finalPrompt: string | undefined;
+
+      try {
       const response = await fetch("/api/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -138,18 +150,30 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
         finalPrompt?: string;
         error?: string;
       };
-      if (!response.ok || !json.imageUrl) throw new Error(json.error ?? "Generation failed");
+        if (response.ok && json.imageUrl) {
+          imageUrl = json.imageUrl;
+          modelUsed = json.modelUsed;
+          finalPrompt = json.finalPrompt;
+        }
+      } catch {
+        // fall through to the free engine below
+      }
 
-      await preload(json.imageUrl);
+      if (!imageUrl) {
+        imageUrl = pollinationsUrl;
+        modelUsed = "Pixflow Free";
+      }
+
+      await preload(imageUrl);
 
       const image: GeneratedImage = {
         id: crypto.randomUUID(),
-        url: json.imageUrl,
+        url: imageUrl,
         prompt: text,
-        enhancedPrompt: json.finalPrompt,
+        enhancedPrompt: finalPrompt,
         style,
         quality,
-        model: json.modelUsed ?? "Pixflow",
+        model: modelUsed ?? "Pixflow",
         ratio: size.id,
         width: size.width,
         height: size.height,
