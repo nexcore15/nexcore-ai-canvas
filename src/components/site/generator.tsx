@@ -1,44 +1,17 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Aperture, Loader2, Sparkles, Upload, Wand2, X, Zap } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Loader2, Sparkles, Upload, Wand2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ImageCard } from "@/components/site/image-card";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useGallery, type GeneratedImage } from "@/lib/gallery";
+import { analyzePrompt } from "@/lib/prompt-analysis";
 import { quickPrompts } from "@/lib/prompts";
-import styleRealistic from "@/assets/style-realistic.png";
-import style3d from "@/assets/style-3d.png";
-import style2d from "@/assets/style-2d.png";
-import styleCartoon from "@/assets/style-cartoon.png";
-
-/** Aspect ratios offered to the user, mapped to generation dimensions. */
-const ratios = [
-  { id: "1:1", label: "Square", hint: "1:1", width: 1024, height: 1024 },
-  { id: "16:9", label: "Wide", hint: "16:9", width: 1344, height: 768 },
-  { id: "9:16", label: "Phone", hint: "9:16", width: 768, height: 1344 },
-  { id: "4:3", label: "Classic", hint: "4:3", width: 1152, height: 864 },
-  { id: "3:4", label: "Portrait", hint: "3:4", width: 864, height: 1152 },
-] as const;
-
-const styles = [
-  { id: "realistic", label: "Realistic", art: styleRealistic, note: "Photoreal" },
-  { id: "3d", label: "3D", art: style3d, note: "Rendered" },
-  { id: "2d", label: "2D", art: style2d, note: "Illustration" },
-  { id: "cartoon", label: "Cartoon", art: styleCartoon, note: "Playful" },
-] as const;
-
-const qualities = [
-  { id: "hd", label: "HD", note: "Fast · sharp", Icon: Zap },
-  { id: "ultra", label: "Ultra", note: "Slower · finest detail", Icon: Aperture },
-] as const;
 
 export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
   const [prompt, setPrompt] = useState(initialPrompt);
-  const [style, setStyle] = useState<string>("realistic");
-  const [quality, setQuality] = useState<string>("hd");
-  const [ratio, setRatio] = useState<string>("1:1");
   const [loading, setLoading] = useState(false);
   const [stage, setStage] = useState("");
   const [progress, setProgress] = useState(0);
@@ -51,6 +24,11 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
 
   const { add, toggleFavorite } = useGallery();
   const { user, refresh } = useAuth();
+
+  /** Smart detection layer — the prompt itself decides the generation config. */
+  const analysis = useMemo(() => analyzePrompt(prompt), [prompt]);
+  const style = analysis.style;
+  const quality = analysis.quality;
 
   /** Records a generation against the signed-in account and spends one credit. */
   async function track(image: GeneratedImage, kind: "generate" | "edit") {
