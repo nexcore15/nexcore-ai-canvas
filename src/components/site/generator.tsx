@@ -272,84 +272,26 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
           </span>
         </div>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <fieldset>
-            <legend className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Style
-            </legend>
-            <div className="grid grid-cols-2 gap-2">
-              {styles.map(({ id, label, art, note }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setStyle(id)}
-                  aria-pressed={style === id}
-                  className={`${chip} tilt-3d ${style === id ? chipOn : chipOff}`}
+        {prompt.trim().length > 2 ? (
+          <div className="tilt-3d mt-4 rounded-2xl border border-border/60 bg-background/40 p-3">
+            <p className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              <Sparkles className="size-3.5 text-accent" aria-hidden="true" /> AI detected
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {analysis.chips.map((c) => (
+                <span
+                  key={c}
+                  className="rounded-full bg-[image:var(--gradient-brand-soft)] px-3 py-1.5 text-xs font-medium text-foreground"
                 >
-                  <img
-                    src={art}
-                    alt=""
-                    aria-hidden="true"
-                    width={512}
-                    height={512}
-                    loading="lazy"
-                    className={`size-9 shrink-0 object-contain drop-shadow-[0_6px_14px_oklch(0.66_0.24_296/45%)] ${
-                      style === id ? "float-3d" : ""
-                    }`}
-                  />
-                  <span className="text-left leading-tight">
-                    {label}
-                    <span className="block text-[11px] opacity-70">{note}</span>
-                  </span>
-                </button>
+                  {c}
+                </span>
               ))}
             </div>
-          </fieldset>
-
-          <fieldset>
-            <legend className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Quality
-            </legend>
-            <div className="grid gap-2">
-              {qualities.map(({ id, label, note, Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setQuality(id)}
-                  aria-pressed={quality === id}
-                  className={`${chip} justify-between ${quality === id ? chipOn : chipOff}`}
-                >
-                  <span className="flex items-center gap-2">
-                    <Icon className="size-4 text-accent" aria-hidden="true" />
-                    <span className="font-medium">{label}</span>
-                  </span>
-                  <span className="text-[11px] opacity-70">{note}</span>
-                </button>
-              ))}
-            </div>
-          </fieldset>
-        </div>
-
-        <fieldset className="mt-4">
-          <legend className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Shape
-          </legend>
-          <div className="flex flex-wrap gap-2">
-            {ratios.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => setRatio(r.id)}
-                aria-pressed={ratio === r.id}
-                className={`press rounded-xl border px-3 py-2 text-xs ${
-                  ratio === r.id ? chipOn : chipOff
-                }`}
-              >
-                {r.label} <span className="opacity-60">{r.hint}</span>
-              </button>
-            ))}
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Settings are chosen from your prompt — just hit generate.
+            </p>
           </div>
-        </fieldset>
+        ) : null}
 
         <button
           type="button"
