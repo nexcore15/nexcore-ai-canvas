@@ -186,17 +186,47 @@ html.light {
     inset: 0;
     z-index: -1;
     pointer-events: none;
+    background-image: radial-gradient(120% 90% at 50% 40%, transparent 40%, var(--vignette) 100%);
+  }
+
+  /* True 3D perspective floor + ceiling grid that scrolls into the horizon. */
+  body > #app-3d-bg,
+  .scene-3d-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    perspective: 620px;
+    perspective-origin: 50% 50%;
+    overflow: hidden;
+  }
+
+  .scene-3d-bg::before,
+  .scene-3d-bg::after {
+    content: "";
+    position: absolute;
+    left: -60%;
+    width: 220%;
+    height: 140vh;
     background-image:
       linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px),
-      radial-gradient(120% 90% at 50% 40%, transparent 40%, var(--vignette) 100%);
-    background-size:
-      72px 72px,
-      72px 72px,
-      100% 100%;
-    mask-image: radial-gradient(120% 80% at 50% 0%, oklch(0 0 0) 20%, transparent 85%),
-      linear-gradient(oklch(0 0 0), oklch(0 0 0));
-    mask-composite: add;
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+    background-size: 90px 90px;
+    animation: grid-run 14s linear infinite;
+  }
+
+  .scene-3d-bg::before {
+    top: 52%;
+    transform-origin: top center;
+    transform: rotateX(76deg);
+    mask-image: linear-gradient(to bottom, transparent, oklch(0 0 0) 35%, transparent 85%);
+  }
+
+  .scene-3d-bg::after {
+    bottom: 52%;
+    transform-origin: bottom center;
+    transform: rotateX(-76deg);
+    mask-image: linear-gradient(to top, transparent, oklch(0 0 0) 35%, transparent 85%);
   }
 
   @keyframes orb-drift {
@@ -214,6 +244,18 @@ html.light {
   @media (prefers-reduced-motion: reduce) {
     body::before {
       animation: none;
+    }
+    .scene-3d-bg::before,
+    .scene-3d-bg::after {
+      animation: none;
+    }
+  }
+
+  @keyframes grid-run {
+    to {
+      background-position:
+        0 90px,
+        0 90px;
     }
   }
 }
