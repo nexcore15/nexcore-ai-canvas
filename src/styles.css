@@ -64,7 +64,7 @@
 /* Pixflow AI design system — dark-first, violet + cyan gradient accents. */
 :root {
   --radius: 1rem;
-  --background: oklch(0.135 0.025 272);
+  --background: oklch(0.12 0.03 275);
   --foreground: oklch(0.97 0.01 270);
   --card: oklch(0.195 0.03 275);
   --card-foreground: oklch(0.97 0.01 270);
@@ -117,6 +117,11 @@
   );
   --shadow-glow: 0 22px 70px -22px oklch(0.66 0.24 296 / 60%);
   --shadow-card: 0 12px 40px -22px oklch(0 0 0 / 80%);
+
+  --orb-violet: oklch(0.66 0.24 296 / 26%);
+  --orb-cyan: oklch(0.8 0.15 200 / 20%);
+  --grid-line: oklch(1 0 0 / 4%);
+  --vignette: oklch(0.06 0.02 275 / 70%);
 }
 
 html.light {
@@ -137,6 +142,10 @@ html.light {
   --sidebar: oklch(0.98 0.005 280);
   --sidebar-foreground: oklch(0.2 0.03 275);
   --shadow-card: 0 12px 40px -26px oklch(0.2 0.03 275 / 45%);
+  --orb-violet: oklch(0.66 0.24 296 / 12%);
+  --orb-cyan: oklch(0.8 0.15 200 / 10%);
+  --grid-line: oklch(0.2 0.03 275 / 5%);
+  --vignette: oklch(0.99 0.005 280 / 55%);
 }
 
 @layer base {
@@ -153,6 +162,59 @@ html.light {
       system-ui,
       sans-serif;
     -webkit-font-smoothing: antialiased;
+    position: relative;
+  }
+
+  /* Slow-drifting aurora orbs + mesh grid behind everything. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: -20vmax;
+    z-index: -2;
+    pointer-events: none;
+    background-image:
+      radial-gradient(38vmax 30vmax at 22% 12%, var(--orb-violet), transparent 62%),
+      radial-gradient(34vmax 28vmax at 82% 26%, var(--orb-cyan), transparent 64%),
+      radial-gradient(40vmax 32vmax at 55% 92%, var(--orb-violet), transparent 66%);
+    filter: blur(40px);
+    animation: orb-drift 38s ease-in-out infinite alternate;
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px),
+      radial-gradient(120% 90% at 50% 40%, transparent 40%, var(--vignette) 100%);
+    background-size:
+      72px 72px,
+      72px 72px,
+      100% 100%;
+    mask-image: radial-gradient(120% 80% at 50% 0%, oklch(0 0 0) 20%, transparent 85%),
+      linear-gradient(oklch(0 0 0), oklch(0 0 0));
+    mask-composite: add;
+  }
+
+  @keyframes orb-drift {
+    0% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+      transform: translate3d(2%, -2%, 0) scale(1.06);
+    }
+    100% {
+      transform: translate3d(-2%, 2%, 0) scale(1.02);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    body::before {
+      animation: none;
+    }
   }
 }
 
