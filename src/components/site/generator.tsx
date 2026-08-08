@@ -121,11 +121,11 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
     startProgress();
 
     // Free, key-less direct Pollinations URL — used if the smart pipeline fails.
-    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
-      text,
-    )}?width=${size.width}&height=${size.height}&nologo=true&seed=${Math.floor(
-      Math.random() * 1_000_000,
-    )}`;
+    const seed = Math.floor(Math.random() * 1_000_000);
+    const freeUrl = (promptText: string) =>
+      `https://image.pollinations.ai/prompt/${encodeURIComponent(
+        promptText,
+      )}?width=${size.width}&height=${size.height}&nologo=true&enhance=false&model=flux&seed=${seed}`;
 
     try {
       let imageUrl: string | undefined;
@@ -154,13 +154,16 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
           imageUrl = json.imageUrl;
           modelUsed = json.modelUsed;
           finalPrompt = json.finalPrompt;
+        } else if (json.finalPrompt) {
+          // Render failed server-side, but the optimized prompt came back.
+          finalPrompt = json.finalPrompt;
         }
       } catch {
         // fall through to the free engine below
       }
 
       if (!imageUrl) {
-        imageUrl = pollinationsUrl;
+        imageUrl = freeUrl(finalPrompt ?? text);
         modelUsed = "Pixflow Free";
       }
 
