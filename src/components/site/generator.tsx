@@ -120,10 +120,7 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: text,
-          style,
-          quality,
-          width: size.width,
-          height: size.height,
+          auto: true,
         }),
       });
       const json = (await response.json()) as {
@@ -238,11 +235,6 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
     };
     reader.readAsDataURL(file);
   }
-
-  const chip =
-    "press relative flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 text-sm";
-  const chipOn = "border-transparent bg-[image:var(--gradient-brand-soft)] text-foreground";
-  const chipOff = "border-border/70 text-muted-foreground hover:text-foreground";
 
   return (
     <div className="mx-auto w-full max-w-3xl">
