@@ -78,7 +78,11 @@ export function Generator({ initialPrompt = "" }: { initialPrompt?: string }) {
     setProgress(100);
   };
 
-  const size = ratios.find((r) => r.id === ratio) ?? ratios[0];
+  const size = {
+    id: analysis.ratio,
+    width: analysis.width,
+    height: analysis.height,
+  };
 
   const preload = (url: string) =>
     new Promise<void>((resolve) => {
