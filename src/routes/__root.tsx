@@ -142,6 +142,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        <div className="scene-3d-bg" aria-hidden="true" />
         {children}
         <Scripts />
       </body>
