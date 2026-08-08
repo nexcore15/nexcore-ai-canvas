@@ -36,7 +36,16 @@ export async function optimizePrompt(
   raw: string,
   style: StyleId,
   quality: QualityId,
+  hints?: { lighting?: string[]; camera?: string[]; aspect?: string },
 ): Promise<{ prompt: string; optimized: boolean }> {
+  const detected = [
+    hints?.lighting?.length ? `Lighting detected in the request: ${hints.lighting.join(", ")}.` : "",
+    hints?.camera?.length ? `Camera / composition detected: ${hints.camera.join(", ")}.` : "",
+    hints?.aspect ? `Framing target: ${hints.aspect}.` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
   const instruction = `You are the prompt engineer for a premium AI image studio.
 Read the user's idea and rewrite it into ONE image-generation prompt. Fidelity to the user's request comes first; style polish comes second.
 
@@ -45,6 +54,7 @@ Hard rules (fidelity):
 - If the user names characters or objects with specific attributes, describe each one separately, in the same order, with its own attributes intact.
 - Keep any place names, signage text or written words the user asked for, verbatim.
 - Do not invent extra main subjects.
+${detected ? `\nDetected generation settings (keep them, do not contradict them):\n${detected}\n` : ""}
 
 Then enrich:
 - Target style: ${STYLE_BRIEF[style]}.
