@@ -273,7 +273,10 @@ async function geminiDirectImage(o: {
       headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ role: "user", parts }],
-        generationConfig: { responseModalities: ["IMAGE"] },
+        generationConfig: {
+          responseModalities: ["IMAGE"],
+          imageConfig: { aspectRatio: aspectRatioValue(o.width, o.height) },
+        },
       }),
     },
   );
@@ -305,6 +308,7 @@ async function pollinationsImage(o: {
     seed: String(o.seed),
     model: "flux",
     nologo: "true",
+    enhance: "false",
     referrer: "pixflow-ai",
   });
   const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(o.prompt)}?${params.toString()}`;
@@ -333,4 +337,21 @@ function aspectLabel(width: number, height: number): string {
   if (Math.abs(r - 4 / 3) < 0.08) return "4:3";
   if (Math.abs(r - 3 / 4) < 0.08) return "3:4 portrait";
   return `${width}x${height}`;
+}
+
+/** Closest aspect ratio Gemini's image config accepts. */
+function aspectRatioValue(width: number, height: number): string {
+  const options: [string, number][] = [
+    ["1:1", 1],
+    ["16:9", 16 / 9],
+    ["9:16", 9 / 16],
+    ["4:3", 4 / 3],
+    ["3:4", 3 / 4],
+  ];
+  const r = width / height;
+  let best = options[0]!;
+  for (const option of options) {
+    if (Math.abs(option[1] - r) < Math.abs(best[1] - r)) best = option;
+  }
+  return best[0];
 }
