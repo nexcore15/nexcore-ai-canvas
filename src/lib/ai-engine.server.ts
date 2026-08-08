@@ -38,15 +38,20 @@ export async function optimizePrompt(
   quality: QualityId,
 ): Promise<{ prompt: string; optimized: boolean }> {
   const instruction = `You are the prompt engineer for a premium AI image studio.
-Read the user's idea, work out what they actually want to see, then write ONE image-generation prompt for it.
+Read the user's idea and rewrite it into ONE image-generation prompt. Fidelity to the user's request comes first; style polish comes second.
 
-Rules:
+Hard rules (fidelity):
+- Reproduce EVERY subject, character, count, name, clothing item, colour, prop, action and spatial relationship exactly as written. Never drop, merge, rename or swap any of them.
+- If the user names characters or objects with specific attributes, describe each one separately, in the same order, with its own attributes intact.
+- Keep any place names, signage text or written words the user asked for, verbatim.
+- Do not invent extra main subjects.
+
+Then enrich:
 - Target style: ${STYLE_BRIEF[style]}.
 - Quality: ${QUALITY_BRIEF[quality]}.
-- Keep every subject, object, count, colour, text and relationship the user asked for. Never swap the subject.
-- Add what is missing: setting, camera angle, lens, lighting, mood, colour palette, materials, level of detail.
+- Add only what is missing: setting detail, camera angle, lens, lighting, mood, colour palette, materials, depth.
 - Describe only what should be visible. No negatives, no "avoid", no lists of don'ts.
-- Output the prompt only: one paragraph, 45-80 words, plain text, no quotes, no labels.`;
+- Output the prompt only: one flowing paragraph, 60-140 words, plain text, no quotes, no labels, no bullet points.`;
 
   const text = await callGemini(instruction, raw);
   if (!text) {
@@ -55,6 +60,7 @@ Rules:
       optimized: false,
     };
   }
+  // Safety net: if the rewrite lost the user's own wording entirely, keep both.
   return { prompt: text, optimized: true };
 }
 
@@ -124,7 +130,7 @@ const clean = (t: string) =>
     .replace(/^["'`\s]+|["'`\s]+$/g, "")
     .replace(/^(prompt|image prompt)\s*:\s*/i, "")
     .replace(/\s+/g, " ")
-    .slice(0, 1400);
+    .slice(0, 2000);
 
 export type RenderResult = {
   imageUrl: string;
