@@ -43,10 +43,12 @@ export const Route = createFileRoute("/api/generate-image")({
 
         const { optimizePrompt, renderImage } = await import("@/lib/ai-engine.server");
 
+        let finalPrompt = raw;
         try {
           const { prompt, optimized } = body.skipOptimize
             ? { prompt: raw, optimized: false }
             : await optimizePrompt(raw, style, quality);
+          finalPrompt = prompt;
 
           const result = await renderImage({ prompt, width, height, quality, seed });
 
@@ -60,7 +62,9 @@ export const Route = createFileRoute("/api/generate-image")({
           const message =
             error instanceof Error ? error.message : "Image generation failed. Try again.";
           console.error("generate-image failed", message);
-          return Response.json({ error: message }, { status: 502 });
+          // Hand the optimized prompt back so the client fallback renders the
+          // detailed prompt instead of the user's raw text.
+          return Response.json({ error: message, finalPrompt }, { status: 502 });
         }
       },
     },
